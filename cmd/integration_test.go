@@ -74,11 +74,24 @@ func TestRealWorldExample(t *testing.T) {
 		"<<(S,Aquamarine)>>",
 		"<<(I,",
 		"<font color=",
+		"interface{}",
+		"(*User, error)",
 	}
 
 	for _, element := range unwantedElements {
 		if strings.Contains(mermaidOutput, element) {
 			t.Errorf("Mermaid output should not contain PlantUML artifact '%s', but it did", element)
+		}
+	}
+
+	expectedMembers := []string{
+		"+GetUser(id int) ptr_User_error",
+		"+CreateUser(user ptr_User) error",
+	}
+
+	for _, member := range expectedMembers {
+		if !strings.Contains(mermaidOutput, member) {
+			t.Errorf("Expected Mermaid output to contain '%s', but it didn't", member)
 		}
 	}
 

@@ -473,18 +473,190 @@ func convertFieldOrMethod(line string) string {
 	line = strings.TrimSpace(line)
 
 	// Remove HTML color tags
-	line = strings.ReplaceAll(line, "<font color=blue>", "")
-	line = strings.ReplaceAll(line, "</font>", "")
+	line = stripFontTags(line)
 
 	if strings.HasPrefix(line, "+ ") {
-		return "+" + strings.TrimSpace(line[2:])
+		return "+" + sanitizeMemberSignature(strings.TrimSpace(line[2:]))
 	} else if strings.HasPrefix(line, "- ") {
-		return "-" + strings.TrimSpace(line[2:])
+		return "-" + sanitizeMemberSignature(strings.TrimSpace(line[2:]))
 	} else if strings.HasPrefix(line, "# ") {
-		return "#" + strings.TrimSpace(line[2:])
+		return "#" + sanitizeMemberSignature(strings.TrimSpace(line[2:]))
 	}
 
 	return line
+}
+
+func stripFontTags(line string) string {
+	for {
+		start := strings.Index(line, "<font")
+		if start == -1 {
+			break
+		}
+
+		end := strings.Index(line[start:], ">")
+		if end == -1 {
+			break
+		}
+
+		line = line[:start] + line[start+end+1:]
+	}
+
+	return strings.ReplaceAll(line, "</font>", "")
+}
+
+func sanitizeMemberSignature(member string) string {
+	openParen := strings.Index(member, "(")
+	closeParen := findMatchingParen(member, openParen)
+
+	if openParen > 0 && closeParen > openParen {
+		name := strings.TrimSpace(member[:openParen])
+		params := sanitizeParameterList(member[openParen+1 : closeParen])
+		returns := sanitizeReturnList(strings.TrimSpace(member[closeParen+1:]))
+		if returns == "" {
+			return fmt.Sprintf("%s(%s)", name, params)
+		}
+
+		return fmt.Sprintf("%s(%s) %s", name, params, returns)
+	}
+
+	parts := strings.Fields(member)
+	if len(parts) < 2 {
+		return member
+	}
+
+	return fmt.Sprintf("%s %s", parts[0], sanitizeTypeExpression(strings.Join(parts[1:], " ")))
+}
+
+func sanitizeParameterList(params string) string {
+	if strings.TrimSpace(params) == "" {
+		return ""
+	}
+
+	rawParams := splitTopLevel(params, ',')
+	sanitized := make([]string, 0, len(rawParams))
+	for _, param := range rawParams {
+		trimmed := strings.TrimSpace(param)
+		if trimmed == "" {
+			continue
+		}
+
+		fields := strings.Fields(trimmed)
+		if len(fields) <= 1 {
+			sanitized = append(sanitized, sanitizeTypeExpression(trimmed))
+			continue
+		}
+
+		typeExpr := sanitizeTypeExpression(strings.Join(fields[1:], " "))
+		sanitized = append(sanitized, fmt.Sprintf("%s %s", fields[0], typeExpr))
+	}
+
+	return strings.Join(sanitized, ", ")
+}
+
+func sanitizeReturnList(returns string) string {
+	returns = strings.TrimSpace(returns)
+	if returns == "" {
+		return ""
+	}
+
+	if strings.HasPrefix(returns, "(") {
+		closeParen := findMatchingParen(returns, 0)
+		if closeParen == len(returns)-1 {
+			parts := splitTopLevel(returns[1:closeParen], ',')
+			sanitized := make([]string, 0, len(parts))
+			for _, part := range parts {
+				trimmed := strings.TrimSpace(part)
+				if trimmed == "" {
+					continue
+				}
+				sanitized = append(sanitized, sanitizeTypeExpression(trimmed))
+			}
+
+			return strings.Join(sanitized, "_")
+		}
+	}
+
+	return sanitizeTypeExpression(returns)
+}
+
+func sanitizeTypeExpression(typeExpr string) string {
+	typeExpr = strings.TrimSpace(typeExpr)
+	if typeExpr == "" {
+		return ""
+	}
+
+	replacer := strings.NewReplacer(
+		"interface{}", "any",
+		"interface{}{}", "any",
+		"interface { }", "any",
+		"interface{} ", "any ",
+		"[]", "slice_",
+		"...", "variadic_",
+		"*", "ptr_",
+		"{", "_",
+		"}", "_",
+		"[", "_",
+		"]", "_",
+		"(", "_",
+		")", "_",
+		",", "_",
+		".", "_",
+	)
+
+	sanitized := replacer.Replace(typeExpr)
+	sanitized = strings.Join(strings.Fields(sanitized), " ")
+	sanitized = strings.ReplaceAll(sanitized, " ", "_")
+	for strings.Contains(sanitized, "__") {
+		sanitized = strings.ReplaceAll(sanitized, "__", "_")
+	}
+
+	return strings.Trim(sanitized, "_")
+}
+
+func splitTopLevel(input string, separator rune) []string {
+	parts := make([]string, 0, 4)
+	depth := 0
+	start := 0
+
+	for idx, char := range input {
+		switch char {
+		case '(', '[', '{':
+			depth++
+		case ')', ']', '}':
+			if depth > 0 {
+				depth--
+			}
+		default:
+			if char == separator && depth == 0 {
+				parts = append(parts, input[start:idx])
+				start = idx + 1
+			}
+		}
+	}
+
+	parts = append(parts, input[start:])
+	return parts
+}
+
+func findMatchingParen(input string, openIndex int) int {
+	if openIndex < 0 || openIndex >= len(input) || input[openIndex] != '(' {
+		return -1
+	}
+
+	depth := 0
+	for idx := openIndex; idx < len(input); idx++ {
+		switch input[idx] {
+		case '(':
+			depth++
+		case ')':
+			depth--
+			if depth == 0 {
+				return idx
+			}
+		}
+	}
+
+	return -1
 }
 
 // convertRelationshipWithMapping converts PlantUML relationships to Mermaid syntax using class name mapping

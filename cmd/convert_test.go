@@ -178,11 +178,47 @@ class "User" << (S,Aquamarine) >> {
     + Data <font color=blue>map</font>[string]interface{}
 }
 @enduml`,
-			expected: `classDiagram
-    class User {
-        <<struct>>
-        +Data map[string]interface{}
-    }`,
+			expected: strings.Join([]string{
+				"classDiagram",
+				"    class User {",
+				"        <<struct>>",
+				"        +Data map_string_any",
+				"    }",
+			}, "\n"),
+		},
+		{
+			name: "github safe method signatures",
+			input: `@startuml
+interface "UserService" {
+	+ GetUser(id int) (*User, error)
+	+ CreateUser(user *User) error
+}
+@enduml`,
+			expected: strings.Join([]string{
+				"classDiagram",
+				"    class UserService {",
+				"        <<interface>>",
+				"        +GetUser(id int) ptr_User_error",
+				"        +CreateUser(user ptr_User) error",
+				"    }",
+			}, "\n"),
+		},
+		{
+			name: "github safe complex field types",
+			input: `@startuml
+class "Repository" << (S,Aquamarine) >> {
+	- db interface{}
+	+ Users []User
+}
+@enduml`,
+			expected: strings.Join([]string{
+				"classDiagram",
+				"    class Repository {",
+				"        <<struct>>",
+				"        -db any",
+				"        +Users slice_User",
+				"    }",
+			}, "\n"),
 		},
 		{
 			name: "constraints handling",
@@ -483,7 +519,7 @@ func TestConvertFieldOrMethod(t *testing.T) {
 		{
 			name:     "private field",
 			input:    "- db interface{}",
-			expected: "-db interface{}",
+			expected: "-db any",
 		},
 		{
 			name:     "protected field",
@@ -493,17 +529,17 @@ func TestConvertFieldOrMethod(t *testing.T) {
 		{
 			name:     "public method",
 			input:    "+ GetUser(id int) (*User, error)",
-			expected: "+GetUser(id int) (*User, error)",
+			expected: "+GetUser(id int) ptr_User_error",
 		},
 		{
 			name:     "field with html color tags",
 			input:    "+ Data <font color=blue>map</font>[string]interface{}",
-			expected: "+Data map[string]interface{}",
+			expected: "+Data map_string_any",
 		},
 		{
 			name:     "complex field with multiple tags",
 			input:    "- internal <font color=red>chan</font> <font color=blue>struct</font>{}",
-			expected: "-internal <font color=red>chan struct{}",
+			expected: "-internal chan_struct",
 		},
 		{
 			name:     "empty input",

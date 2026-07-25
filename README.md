@@ -107,7 +107,7 @@ type User struct {
 
 // DatabaseUserService implements UserService
 type DatabaseUserService struct {
-    db interface{}
+    DB any
 }
 
 func (s *DatabaseUserService) GetUser(id int) (*User, error) {
@@ -138,7 +138,7 @@ namespace example {
         + Email string
     }
     class "DatabaseUserService" << (S,Aquamarine) >> {
-        - db interface{}
+        + DB any
         + GetUser(id int) (*User, error)
         + CreateUser(user *User) error
     }
@@ -156,10 +156,11 @@ go2uml -format=mermaid ./example
 
 ```mermaid
 classDiagram
-    class UserService {
-        <<interface>>
-        +GetUser(id int) (*User, error)
-        +CreateUser(user *User) error
+    class DatabaseUserService {
+        <<struct>>
+        +DB any
+        +GetUser(id int) ptr_User_error
+        +CreateUser(user ptr_User) error
     }
     class User {
         <<struct>>
@@ -167,11 +168,10 @@ classDiagram
         +Name string
         +Email string
     }
-    class DatabaseUserService {
-        <<struct>>
-        -db interface{}
-        +GetUser(id int) (*User, error)
-        +CreateUser(user *User) error
+    class UserService {
+        <<interface>>
+        +GetUser(id int) ptr_User_error
+        +CreateUser(user ptr_User) error
     }
     DatabaseUserService --|> UserService
 ```
@@ -224,7 +224,7 @@ Mermaid diagrams can be embedded directly in README files:
 classDiagram
     class UserService {
         <<interface>>
-        +GetUser(id int) (*User, error)
+        +GetUser(id int) ptr_User_error
     }
 ```
 ````
@@ -260,6 +260,31 @@ Contributions are welcome! This project builds upon the excellent foundation of 
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+### Local Tasks
+
+Install Task locally if needed:
+
+```bash
+go install github.com/go-task/task/v3/cmd/task@latest
+```
+
+Common development commands:
+
+```bash
+task run
+task build
+task format
+task lint
+task test
+task pre-checkin
+```
+
+Release tagging is guarded and only works from a clean `master` branch. The task reruns formatting, linting, and tests, computes the next patch tag from the latest existing `v*` tag, and then pushes that tag to `origin`.
+
+```bash
+task release
+```
 
 ## 📄 License
 
