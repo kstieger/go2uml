@@ -1,6 +1,6 @@
 module github.com/kstieger/go2uml
 
-go 1.25
+go 1.25.0
 
 require github.com/jfeliu007/goplantuml v1.6.3
 
