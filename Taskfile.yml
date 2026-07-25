@@ -6,6 +6,7 @@ vars:
   GO_MAIN: ./cmd
   EXAMPLE_DIR: ./example
   REMOTE_NAME: origin
+  TAG: '{{default "" .TAG}}'
 
 tasks:
   run:
@@ -43,7 +44,7 @@ tasks:
       - task: test
 
   release:
-    desc: Validate master, bump the next patch tag, and push it to GitHub
+    desc: Validate master, create or reuse a tag, and publish a GitHub Release
     deps:
       - pre-checkin
     cmds:
@@ -62,22 +63,48 @@ tasks:
         git remote get-url {{.REMOTE_NAME}} >/dev/null 2>&1
         git fetch {{.REMOTE_NAME}} --tags
 
-        latest_tag=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
-        if [[ -z "$latest_tag" ]]; then
-          next_tag=v0.1.0
-        else
-          version=${latest_tag#v}
-          IFS=. read -r major minor patch _extra <<< "$version"
-          if [[ -z "$major" || -z "$minor" ]]; then
-            echo "latest tag '$latest_tag' is not a supported semantic version" >&2
-            exit 1
-          fi
-          if [[ -z "$patch" ]]; then
-            patch=0
-          fi
-          next_tag=v${major}.${minor}.$((patch + 1))
+        if ! command -v gh >/dev/null 2>&1; then
+          echo "release requires GitHub CLI (gh) to create the GitHub Release" >&2
+          exit 1
         fi
 
-        git tag -a "$next_tag" -m "Release $next_tag"
-        git push {{.REMOTE_NAME}} "$next_tag"
-        echo "created and pushed $next_tag"
+        requested_tag='{{.TAG}}'
+        if [[ -n "$requested_tag" ]]; then
+          next_tag="$requested_tag"
+        else
+          latest_tag=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
+          if [[ -z "$latest_tag" ]]; then
+            next_tag=v0.1.0
+          else
+            version=${latest_tag#v}
+            IFS=. read -r major minor patch _extra <<< "$version"
+            if [[ -z "$major" || -z "$minor" ]]; then
+              echo "latest tag '$latest_tag' is not a supported semantic version" >&2
+              exit 1
+            fi
+            if [[ -z "$patch" ]]; then
+              patch=0
+            fi
+            next_tag=v${major}.${minor}.$((patch + 1))
+          fi
+        fi
+
+        if ! git rev-parse "$next_tag" >/dev/null 2>&1; then
+          git tag -a "$next_tag" -m "Release $next_tag"
+        fi
+
+        if ! git ls-remote --tags {{.REMOTE_NAME}} "$next_tag" | grep -q "$next_tag"; then
+          git push {{.REMOTE_NAME}} "$next_tag"
+        fi
+
+        if gh release view "$next_tag" >/dev/null 2>&1; then
+          echo "GitHub Release already exists for $next_tag"
+          exit 0
+        fi
+
+        gh release create "$next_tag" \
+          --verify-tag \
+          --generate-notes \
+          --title "$next_tag"
+
+        echo "created and published GitHub Release $next_tag"

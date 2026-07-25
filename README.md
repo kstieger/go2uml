@@ -286,6 +286,13 @@ Release tagging is guarded and only works from a clean `master` branch. The task
 task release
 ```
 
+The release task also creates a GitHub Release object, not just a Git tag. It requires GitHub CLI authentication and supports publishing a release for an existing tag when needed:
+
+```bash
+gh auth login
+task release TAG=v0.1.1
+```
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
