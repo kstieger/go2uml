@@ -1,7 +1,7 @@
 # go2uml
 
 [![CI](https://github.com/kstieger/go2uml/workflows/CI/badge.svg)](https://github.com/kstieger/go2uml/actions)
-[![Go Report Card](https://goreportcard.com/badge/github.com/kstieger/go2uml)](https://goreportcard.com/report/github.com/kstieger/go2uml)
+[![golangci-lint](https://img.shields.io/badge/linted%20with-golangci--lint-brightgreen.svg)](https://golangci-lint.run/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **go2uml** is an enhanced version of [goplantuml](https://github.com/jfeliu007/goplantuml) that adds **Mermaid diagram support** alongside the original PlantUML functionality. Generate beautiful class diagrams from your Go source code in both PlantUML and Mermaid formats.

@@ -14,6 +14,12 @@ import (
 	goplantuml "github.com/jfeliu007/goplantuml/parser"
 )
 
+var (
+	Version = "dev"
+	BuiltAt = "unknown"
+	GitHash = "unknown"
+)
+
 // RenderingOptionSlice will implements the sort interface
 type RenderingOptionSlice []goplantuml.RenderingOption
 
@@ -72,7 +78,12 @@ func main() {
 	)
 	hidePrivateMembers := flag.Bool("hide-private-members", false, "Hide private fields and methods")
 	format := flag.String("format", "plantuml", "output format: plantuml or mermaid (mermaid support is experimental)")
+	showVersion := flag.Bool("version", false, "print version information and exit")
 	flag.Parse()
+	if *showVersion {
+		fmt.Printf("go2uml, version %s\nbuilt at %s\ngit hash %s\n", Version, BuiltAt, GitHash)
+		return
+	}
 	renderingOptions := map[goplantuml.RenderingOption]any{
 		goplantuml.RenderConnectionLabels:  *showConnectionLabels,
 		goplantuml.RenderFields:            !*hideFields,
