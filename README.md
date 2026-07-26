@@ -277,6 +277,7 @@ task build
 task format
 task lint
 task vulncheck
+task secretleakcheck
 task test
 task pre-checkin
 ```
