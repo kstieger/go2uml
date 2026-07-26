@@ -68,7 +68,7 @@ tasks:
       - task: test
 
   release:
-    desc: Validate master, create or reuse a tag, and publish a GitHub Release
+    desc: Validate master, create or reuse a tag, and push it — CI builds the binaries and publishes the GitHub Release
     deps:
       - pre-checkin
     cmds:
@@ -86,11 +86,6 @@ tasks:
 
         git remote get-url {{.REMOTE_NAME}} >/dev/null 2>&1
         git fetch {{.REMOTE_NAME}} --tags
-
-        if ! command -v gh >/dev/null 2>&1; then
-          echo "release requires GitHub CLI (gh) to create the GitHub Release" >&2
-          exit 1
-        fi
 
         requested_tag='{{.TAG}}'
         if [[ -n "$requested_tag" ]]; then
@@ -121,14 +116,4 @@ tasks:
           git push {{.REMOTE_NAME}} "$next_tag"
         fi
 
-        if gh release view "$next_tag" >/dev/null 2>&1; then
-          echo "GitHub Release already exists for $next_tag"
-          exit 0
-        fi
-
-        gh release create "$next_tag" \
-          --verify-tag \
-          --generate-notes \
-          --title "$next_tag"
-
-        echo "created and published GitHub Release $next_tag"
+        echo "pushed tag $next_tag — GitHub Actions will build the binaries and publish the release"

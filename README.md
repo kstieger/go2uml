@@ -276,20 +276,22 @@ task run
 task build
 task format
 task lint
+task vulncheck
 task test
 task pre-checkin
 ```
 
-Release tagging is guarded and only works from a clean `master` branch. The task reruns formatting, linting, and tests, computes the next patch tag from the latest existing `v*` tag, and then pushes that tag to `origin`.
+`task build` cross-compiles for linux/darwin/windows (amd64+arm64) into `dist/`.
+
+Release tagging is guarded and only works from a clean `master` branch. The task reruns formatting, linting, vulnerability scanning, and tests, computes the next patch tag from the latest existing `v*` tag, and then pushes that tag to `origin`:
 
 ```bash
 task release
 ```
 
-The release task also creates a GitHub Release object, not just a Git tag. It requires GitHub CLI authentication and supports publishing a release for an existing tag when needed:
+Pushing a `v*` tag triggers the `Release` GitHub Actions workflow, which cross-compiles the binaries and publishes them as assets on a GitHub Release for that tag — no local `gh` CLI or authentication needed. To use a specific tag instead of the next computed patch version:
 
 ```bash
-gh auth login
 task release TAG=v0.1.1
 ```
 
